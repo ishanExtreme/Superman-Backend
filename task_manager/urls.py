@@ -14,7 +14,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from tasks.views import (
     UserCreationView,
     UserLoginView,
@@ -83,7 +83,8 @@ urlpatterns = (
         path("api/token", views.obtain_auth_token),
         path("api/count/task_complete", TaskIncompleteCountView.as_view()),
         path("api/count/task_incomplete", TaskIncompleteCountView.as_view()),
-        path("api/change-password/", ChangePasswordView.as_view())
+        path("api/change-password/", ChangePasswordView.as_view()),
+        path('api/password-reset/', include('django_rest_passwordreset.urls', namespace='password_reset')),
     ]
     + router.urls
     + stage.urls

@@ -6,6 +6,7 @@ from django.test import RequestFactory
 from ..apiviews import (
     ChangePasswordView
 )
+from django.core import mail
 
 
 class UserFunctionalityTest(APITestCase):
@@ -18,7 +19,7 @@ class UserFunctionalityTest(APITestCase):
         self.user.set_password("i_am_batman")
         self.user.save()
 
-    def test_reset_password_with_correct_old_password(self):
+    def test_change_password_with_correct_old_password(self):
         new_pass = "Ishan@2605"
         request = RequestFactory().patch("/api/change-password/", {"old_password":"i_am_batman", "new_password":"Ishan@2605"}, content_type='application/json')
         force_authenticate(request, user=self.user)
@@ -26,12 +27,37 @@ class UserFunctionalityTest(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.user.check_password(new_pass), True)
 
-    def test_reset_password_with_incorrect_password(self):
+    def test_change_password_with_incorrect_password(self):
         new_pass = "Welcome@123"
         request = RequestFactory().patch("/api/change-password/", {"old_password":"welcome2233", "new_password":new_pass}, content_type='application/json')
         force_authenticate(request, user=self.user)
         response = ChangePasswordView.as_view()(request)
         self.assertEqual(response.status_code, 400)
+
+    def test_reset_password_with_correct_token(self):
+        new_pass = "Welcome@123"
+        self.client.post("/api/password-reset/", {"email":self.user.email})
+        token = mail.outbox[0].body.split(" ")[2]
+        res = self.client.post("/api/password-reset/confirm/", {"token":token, "password": new_pass})
+        self.assertEqual(res.status_code, 200)
+        user = User.objects.get(email=self.user.email)
+        self.assertEqual(user.check_password(new_pass), True)
+
+
+    def test_reset_password_with_false_token(self):
+        new_pass = "Welcome@123"
+        self.client.post("/api/password-reset/", {"email":self.user.email})
+        token = "2132231"
+        res = self.client.post("/api/password-reset/confirm/", {"token":token, "password": new_pass})
+        self.assertEqual(res.status_code, 404)
+        user = User.objects.get(email=self.user.email)
+        self.assertEqual(user.check_password(new_pass), False)
+        
+
+    # def test_reset_password_with_auth(self):
+    #     self.client.login(username="bruce_wayne", password="i_am_batman")
+    #     response = self.client.get("/api/password-reset/")
+    #     self.assertEqual(response.status_code, 200)
     
 class TaskViewSetTest(APITestCase):
     def setUp(self):

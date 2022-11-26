@@ -4,6 +4,10 @@ from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from django.db import transaction
 
+from django.dispatch import receiver
+from django_rest_passwordreset.signals import reset_password_token_created
+from django.core.mail import send_mail 
+
 
 class Board(models.Model):
     title = models.CharField(max_length=255)
@@ -159,3 +163,20 @@ class Schedule(models.Model):
 
     def __str__(self):
         return f"Schedule for {self.time} daily"
+
+
+@receiver(reset_password_token_created)
+def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
+
+    email_plaintext_message = f"Verification Token: {reset_password_token.key}"
+
+    send_mail(
+        # title:
+        f"Passowrd reset for username: {reset_password_token.user.username}",
+        # message:
+        email_plaintext_message,
+        # from:
+        "noreply@somehost.local",
+        # to:
+        [reset_password_token.user.email]
+    )

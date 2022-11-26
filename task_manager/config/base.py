@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "django_filters",
     "tasks",
+    'django_rest_passwordreset',
 ]
 
 MIDDLEWARE = [
