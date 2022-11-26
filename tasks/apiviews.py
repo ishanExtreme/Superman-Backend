@@ -7,6 +7,7 @@ from rest_framework.serializers import (
     StringRelatedField,
 )
 from rest_framework.views import APIView
+from rest_framework import generics
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, mixins, GenericViewSet
@@ -19,6 +20,7 @@ from django_filters.rest_framework import (
     BooleanFilter,
     DateFilter,
 )
+from rest_framework import status
 
 
 class TaskCompletedCountView(APIView):
@@ -27,6 +29,7 @@ class TaskCompletedCountView(APIView):
     """
 
     renderer_classes = (JSONRenderer,)
+    permission_classes = (IsAuthenticated, )
 
     def get(self, request, format=None):
         task_count = Task.objects.filter(completed=True).count()
@@ -40,6 +43,7 @@ class TaskIncompleteCountView(APIView):
     """
 
     renderer_classes = (JSONRenderer,)
+    permission_classes = (IsAuthenticated, )
 
     def get(self, request, format=None):
         task_count = Task.objects.filter(completed=False).count()
@@ -255,3 +259,50 @@ class HistroryViewSet(mixins.ListModelMixin, GenericViewSet):
         return History.objects.filter(
             task=self.kwargs["task_pk"], task__user=self.request.user
         )
+
+
+######################## User password update logic ##############################
+
+class ChangePasswordSerializer(ModelSerializer):
+    """
+    Serializer for user password change view
+    """
+    old_password = CharField(required=True)
+    new_password = CharField(required=True)
+
+    class Meta:
+        model = User
+        fields = ["old_password", "new_password"]
+
+class ChangePasswordView(generics.UpdateAPIView):
+    """
+    Endpoint to change user's password having current password in hand
+    """
+    serializer_class = ChangePasswordSerializer
+    model = User
+    permission_classes = (IsAuthenticated, )
+
+    def get_object(self):
+        obj = self.request.user
+        return obj
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        if not instance.check_password(serializer.data.get("old_password")):
+            return Response({"old_password": ["Wrong password."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        instance.set_password(serializer.data.get("new_password"))
+        instance.save()
+        response = {
+                'status': 'success',
+                'code': status.HTTP_200_OK,
+                'message': 'Password updated successfully',
+                'data': []
+            }
+
+        return Response(response)
+        
+

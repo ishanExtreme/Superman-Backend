@@ -38,6 +38,7 @@ from tasks.apiviews import (
     TaskViewSetSuper,
     TaskCompletedCountView,
     TaskIncompleteCountView,
+    ChangePasswordView
 )
 
 from rest_framework.routers import SimpleRouter
@@ -82,6 +83,7 @@ urlpatterns = (
         path("api/token", views.obtain_auth_token),
         path("api/count/task_complete", TaskIncompleteCountView.as_view()),
         path("api/count/task_incomplete", TaskIncompleteCountView.as_view()),
+        path("api/change-password/", ChangePasswordView.as_view())
     ]
     + router.urls
     + stage.urls
