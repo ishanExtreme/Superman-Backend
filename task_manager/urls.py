@@ -26,6 +26,7 @@ from tasks.views import (
     home_view,
     handle_schedule_request,
     UpdateScheduleView,
+    MessageView
 )
 from rest_framework.authtoken import views
 from tasks.apiviews import (
@@ -85,6 +86,7 @@ urlpatterns = (
         path("api/count/task_incomplete", TaskIncompleteCountView.as_view()),
         path("api/change-password/", ChangePasswordView.as_view()),
         path('api/password-reset/', include('django_rest_passwordreset.urls', namespace='password_reset')),
+        path('api/message/', MessageView.as_view())
     ]
     + router.urls
     + stage.urls
