@@ -1,4 +1,3 @@
-from django.contrib.auth.models import User
 from django.core.mail import send_mail
 from tasks.models import Task, History, Schedule
 from datetime import timedelta, datetime
@@ -9,6 +8,9 @@ from celery.schedules import crontab
 from task_manager.celery import app
 from django.utils.timezone import make_aware
 from django.db.models import Q
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
 def send_email_util(user_id):

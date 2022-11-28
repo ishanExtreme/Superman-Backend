@@ -1,4 +1,3 @@
-from django.contrib.auth.models import User
 from django.db import models
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
@@ -7,6 +6,9 @@ from django.db import transaction
 from django.dispatch import receiver
 from django_rest_passwordreset.signals import reset_password_token_created
 from django.core.mail import send_mail 
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
 class Board(models.Model):

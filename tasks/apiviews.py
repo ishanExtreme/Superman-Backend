@@ -1,4 +1,3 @@
-from django.contrib.auth.models import User
 from tasks.models import Task, History, Board, Stage
 from rest_framework.serializers import (
     ModelSerializer,
@@ -21,6 +20,9 @@ from django_filters.rest_framework import (
     DateFilter,
 )
 from rest_framework import status
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
 class TaskCompletedCountView(APIView):

@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "custom_user.apps.CustomUserConfig",
     "rest_framework",
     "rest_framework.authtoken",
     "corsheaders",
@@ -82,6 +83,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "task_manager.wsgi.application"
+
+AUTH_USER_MODEL = "custom_user.User"
 
 
 # Password validation
