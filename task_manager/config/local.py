@@ -4,7 +4,7 @@ import os
 
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", ".loca.lt"]
+ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", ".loca.lt", ".ngrok.io"]
 
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 

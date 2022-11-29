@@ -15,6 +15,8 @@ from django.core.exceptions import PermissionDenied
 
 from twilio.twiml.messaging_response import MessagingResponse
 
+from tasks.utils import process_message
+
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
@@ -231,9 +233,14 @@ class MessageView(View):
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
-        print(request.POST)
+
+        user_name = request.POST.get("ProfileName")
+        phone = request.POST.get("From").split(":")[1][3:]
+        message = request.POST.get("Body")
+
+        res_message = process_message(user_name, message, phone)
         response = MessagingResponse()
-        response.message("Hello")
+        response.message(res_message)
         return HttpResponse(str(response))
   
 
