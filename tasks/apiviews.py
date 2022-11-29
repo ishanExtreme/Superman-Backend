@@ -229,7 +229,7 @@ class TaskViewSet(mixins.ListModelMixin, GenericViewSet):
 
     def get_queryset(self):
         return Task.objects.filter(
-            deleted=False, stage=self.kwargs["stage_pk"], user=self.request.user
+            deleted=False, stage=self.kwargs["board_pk"], user=self.request.user
         ).order_by("priority")
 
 

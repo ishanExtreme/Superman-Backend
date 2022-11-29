@@ -61,12 +61,11 @@ router.register("api/task", TaskViewSetSuper)
 # history route
 # history = routers.NestedSimpleRouter(router, "api/task", lookup="task")
 # history.register("history", HistroryViewSet)
-# Stage route
-stage = routers.NestedSimpleRouter(router, "api/board", lookup="board")
-stage.register("stage", StageListView)
-# Task route
-task = routers.NestedSimpleRouter(router, "api/stage", lookup="stage")
-task.register("task", TaskViewSet)
+# Nested stage and task route in boards
+boards = routers.NestedSimpleRouter(router, "api/board", lookup="board")
+boards.register("stage", StageListView)
+boards.register("task", TaskViewSet)
+
 
 urlpatterns = (
     [
@@ -82,13 +81,13 @@ urlpatterns = (
         path("update-schedule/<pk>/", UpdateScheduleView.as_view()),
         path("report/", handle_schedule_request),
         path("api/token", views.obtain_auth_token),
-        path("api/count/task_complete", TaskIncompleteCountView.as_view()),
+        path("api/count/task_complete", TaskCompletedCountView.as_view()),
         path("api/count/task_incomplete", TaskIncompleteCountView.as_view()),
         path("api/change-password/", ChangePasswordView.as_view()),
         path('api/password-reset/', include('django_rest_passwordreset.urls', namespace='password_reset')),
         path('api/message/', MessageView.as_view())
     ]
     + router.urls
-    + stage.urls
-    + task.urls
+    + boards.urls
+    # + task.urls
 )
