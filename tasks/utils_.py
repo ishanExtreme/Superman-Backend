@@ -305,16 +305,95 @@ Will meet you after this!!!
         return f"""
 Hello, {name} this is SuperTaskManager at your service, here are somethings you can use me for.
 *Feature: Command*
-*1. To list all reminders* _List all reminders_
+*1. To list all boards:* _List all boards_
+
+*2. To create a new board:* _Create board title:<board title>$ desc:<board description>$_
+
+*3. To list all stages in a particular board:*_List all stages from board:<board uid>$_
+
+*4. To create a new stage in a particular board:*_Create stage board:<board_uid>$ title:<stage title>$ desc:<stage description>$_
+
+*5. Show all complete/incomplete tasks:*_List all complete/incomplete tasks_
+
+*6. Show all tasks from a prticular board:*_List tasks from board:<board uid>$_
+
+*7. Preview a particular task:*_Preview task:<task uid>$_
+
+*8. Create a task:*_Create task title:<task title>$ desc:<task description>$ priority:<task priority>$ stage:<stage uild>$ due_date:<task's due date>$_
         """
 
-    # if("list" in message and 
-    # ("all" in message or "every" in message) and 
-    # ("reminder" in message or "reminders" in message)):
+    # show all boards message
+    if("list" in message and 
+    ("all" in message or "every" in message) and 
+    ("boards" in message or "board" in message) and 
+    ("stage" not in message or "stages" not in message) and
+    ("task" not in message or "tasks" not in message)):
+        return show_all_boards(token)
+    
+    # Create a new board
+    if("create" in message and "board" in message and ("stage" not in message or "stages" not in message)):
+        syntax_correct = re.search("create board title:.*\$ desc:.*\$.*", message)
+        if(not syntax_correct):
+            return help("create board")
 
+        title = message[message.find("title")+6:message.find("$")]
+        desc = message[message.find("desc")+5:message.find("$", message.find("desc"))]
+        return create_board(title, desc, token)
 
+    # List all stages in a board
+    if("list" in message and ("all" in message or "every" in message) and ("stages" in message or "stage" in message)):
+        syntax_correct = re.search("list all stages from board:.*\$.*", message)
+        if(not syntax_correct):
+            return help("list all stages")
+        
+        board_id = message[message.find("board")+6:message.find("$")]
+        return show_stages(board_id, token)
 
-                        
+    # create a stage in a board
+    if("create" in message and "stage" in message and ("task" not in message or "tasks" not in message)):
+        syntax_correct = re.search("create stage board:.*\$ title:.*\$ desc:.*\$.*", message)
+        if(not syntax_correct):
+            return help("create stage")
+
+        board_id = message[message.find("board")+6:message.find("$")]
+        title = message[message.find("title")+6:message.find("$", message.find("title"))]
+        desc = message[message.find("desc")+5:message.find("$", message.find("desc"))]
+
+        return create_stage(board_id, title, desc, token)
+
+    # list all tasks
+    if("list" in message and ("tasks" or "task") in message and ("board" or "boards") not in message):
+        syntax_correct = re.search("list all complete|incomplete tasks.*", message)
+        if(not syntax_correct):
+            return help("list all tasks")
+
+        complete = True
+        if("incomplete" in message):
+            complete = False
+
+        return show_tasks(complete, token)
+
+    if("list" in message and ("tasks" or "task") in message and "board" in message):
+        syntax_correct = re.search("list tasks from board:.*\$.*", message)
+        if(not syntax_correct):
+            return help("list all tasks from board")
+        
+        board_id = message[message.find("board")+6:message.find("$")]
+
+        return show_tasks_of_board(board_id, token)
+
+    if("preview" in message and ("task" or "tasks") in message):
+        syntax_correct = re.search("preview task:.*\$.*", message)
+        if(not syntax_correct):
+            return help("preview task")
+
+        task_id = message[message.find("task")+5:message.find("$")]
+
+        return preview_task(task_id, token)
+
+    # if("create" in message and "task" in message):
+    #     syntax_correct = re.search("Create task title:.*\$ desc:.*\$ priority:.*\$ stage:.*\$ due_date:.*\$")
+    #     if(not syntax_correct):                          
 
         
 

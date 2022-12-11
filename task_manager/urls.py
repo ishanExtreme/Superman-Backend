@@ -30,6 +30,7 @@ from tasks.views import (
 )
 from rest_framework.authtoken import views
 from tasks.apiviews import (
+    SendVerificationCode,
     TaskViewSet,
     StageListView,
     UserCreation,
@@ -39,7 +40,9 @@ from tasks.apiviews import (
     TaskViewSetSuper,
     TaskCompletedCountView,
     TaskIncompleteCountView,
-    ChangePasswordView
+    ChangePasswordView,
+    UserWAView,
+    VerifyCode
 )
 
 from rest_framework.routers import SimpleRouter
@@ -85,7 +88,10 @@ urlpatterns = (
         path("api/count/task_incomplete", TaskIncompleteCountView.as_view()),
         path("api/change-password/", ChangePasswordView.as_view()),
         path('api/password-reset/', include('django_rest_passwordreset.urls', namespace='password_reset')),
-        path('api/message/', MessageView.as_view())
+        path('api/message/', MessageView.as_view()),
+        path('api/send-verification-code/', SendVerificationCode.as_view()),
+        path('api/verify-code/', VerifyCode.as_view()),
+        path("api/configure-watsapp/", UserWAView.as_view())
     ]
     + router.urls
     + boards.urls

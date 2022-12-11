@@ -242,7 +242,7 @@ class MessageView(View):
         response = MessagingResponse()
         response.message(res_message)
         return HttpResponse(str(response))
-  
+        
 
 
 # class DisplayTaksView()
