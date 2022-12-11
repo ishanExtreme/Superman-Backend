@@ -455,6 +455,8 @@ class UserWAView(generics.UpdateAPIView):
 
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
+        if(not instance.phone):
+            return Response({"error":["Verify your whatsapp number first"]}, status=status.HTTP_400_BAD_REQUEST)
         serializer = serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
