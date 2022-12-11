@@ -1,9 +1,12 @@
+from datetime import date
+from django.utils.timezone import make_aware
 from tasks.models import Task, History, Board, Stage
 from rest_framework.serializers import (
     ModelSerializer,
     EmailField,
     CharField,
     StringRelatedField,
+    ValidationError
 )
 from rest_framework.views import APIView
 from rest_framework import generics
@@ -166,6 +169,17 @@ class TaskSerializerSuper(ModelSerializer):
             "due_date",
             "created_date",
         ]
+
+    def validate(self, attrs):
+        """
+        Check if due date is not before today
+        """
+        now = date.today()
+
+        if(attrs['due_date'] < now):
+            raise ValidationError("Due date cannot be before today")
+
+        return attrs
 
 
 class HistorySerializer(ModelSerializer):
