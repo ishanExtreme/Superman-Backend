@@ -205,6 +205,13 @@ class BoardViewSet(ModelViewSet):
         # serializer.save()
         serializer.save(created_by=self.request.user)
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if(request.user.reminder_board_id and instance.id == request.user.reminder_board_id):
+            return Response({"error":["This board cannot be deleted"]}, status=status.HTTP_400_BAD_REQUEST)
+        return super().destroy(request, *args, **kwargs)
+
+
 
 class StageListView(mixins.ListModelMixin, GenericViewSet):
     queryset = Stage.objects.all()
@@ -233,6 +240,12 @@ class StageViewSet(ModelViewSet):
         # serializer.user = self.request.user
         # serializer.save()
         serializer.save(created_by=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if(request.user.reminder_board_id and instance.board.id == request.user.reminder_board_id):
+            return Response({"error":["This stage cannot be deleted"]}, status=status.HTTP_400_BAD_REQUEST)
+        return super().destroy(request, *args, **kwargs)
 
 
 class TaskViewSet(mixins.ListModelMixin, GenericViewSet):
