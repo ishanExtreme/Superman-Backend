@@ -25,9 +25,10 @@ client = Client(account_sid, auth_token)
 
 User = get_user_model()
 
+@shared_task(bind=True, autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 1000})
+def send_message(self, user_id):
 
-def send_message(user):
-
+    user = User.objects.get(id=user_id)
     current_date = date.today()
     next_date = current_date + timedelta(days=1)
     # Auth Token
@@ -48,7 +49,7 @@ def send_message(user):
         to=f'whatsapp:+91{user.phone}'
     )
 
-    return res
+    return "send"
 
 
 # def temp():
@@ -72,8 +73,7 @@ def send_message(user):
 def schedule_message():
 
     # get all users with notification_on = True
-    print("in")
     users = User.objects.filter(notification_on=True)
 
     for user in users:
-        send_message(user)
+        send_message.delay(user.id)

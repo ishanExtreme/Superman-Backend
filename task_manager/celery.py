@@ -6,8 +6,6 @@ from django.conf import settings
 from celery import Celery
 from celery.schedules import crontab
 
-# from custom_user.tasks import schedule_message
-
 # set DJANGO_SETTINGS_MODULE with value task_manager.settings
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "task_manager.config.local")
 
@@ -23,6 +21,6 @@ app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 app.conf.beat_schedule = {
     "send-message-every-day": {
         'task': 'schedule_message',
-        'schedule': crontab(minute=0, hour=22)
+        'schedule': crontab(minute=00, hour=22)
     }
 }
