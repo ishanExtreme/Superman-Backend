@@ -1,7 +1,10 @@
+import datetime
 import requests
 import re
 from django.contrib.auth import get_user_model
 from rest_framework.authtoken.models import Token
+
+from tasks.models import Stage
 User = get_user_model()
 
 import environ
@@ -16,6 +19,7 @@ def make_request(url, method, body, token):
     headers = {"Authorization": f"Token {token}", "Content-Type": "application/json; charset=utf-8"}
     if(method == "get"):
             response = requests.get(base_url+url, headers=headers)
+            print(response)
             if(response.ok):
                 return response.json()
             else:
@@ -27,155 +31,26 @@ def make_request(url, method, body, token):
         else:
             raise Exception
 
-def help(message):
-
-    if(message == "list all boards"):
-        return "This command will display all boards in your account."
-
-    if(message == "create board"):
-        return """
-To create a new board send: *Create board title:<board title>$ desc:<board description>$*
-
-example to create a board with title _title-1_ and description _desc-1_
-
-*Create board title:title-1$ desc:desc-1$*
-
-_Note: do include "$" after title end and description end_
-        """
-
-    if("list all stages" in message):
-        return """
-To list all stages of a particular board send: *List all stages from board:<board uid>$*
-
-example to get all stages from board with uid _1_
-
-*List all stages from board:1$*
-
-_Note: to get uid of a board you can use "list all boards" command_
-_Note: dollar at the end is must_
-        """
-
-    if("create stage" in message):
-        return """
-To create a new stage in particular bord: *Create stage board:<board_uid>$ title:<stage title>$ desc:<stage description>$*
-
-example to create a stage in bord with board_id _1_, stage title is _title-1_ and description is _desc-1_
-
-*Create stage board:1$ title:title-1$ desc:desc-1$*
-
-_Note: to get uid of a board you can use "list all boards" command_
-_Note: dollars at position given is must_
-        """
-
-    if(message == "list all tasks"):
-        return """
-This command will display all tasks(complete or incomplete) in your account.
-
-To display all complete tasks: **List all complete tasks**
-
-To display all incomplete tasks: **List all incomplete tasks**
-"""
-
-    if(message == "list all tasks from board"):
-        return """
-This command will display all tasks from a particular board.
-
-To display all tasks from a particula board: *List tasks from board:<board uid>$*
-
-example to display all tasks from board with uid _1_
-
-*List tasks from board:1$*
-
-_Note: to get uid of a board you can use "list all boards" command_
-_Note: dollar at the end is must_
-        """
-
-    if(message == "preview task"):
-        return """
-This command displays details a particular task.
-
-To get details of a particular task: *Preview task:<task uid>$*
-
-example to preview task with uid _1_
-
-*Preview task:1$*
-
-_Note: to get uid of a task you can use any task listing command_
-_Note: dollar at the end is must_
-        """
-
-    if("create task" in message):
-        return """
-This command create task.
-
-To create a task: *Create task title:<task title>$ desc:<task description>$ priority:<task priority>$ stage:<stage uild>$ due_date:<task's due date>$*
-
-example to create a task with title _task title_ and description with _task desc_ and priority with _1_ stage set to _1_ and due_date is _2022-11-30_
-
-*Create task title:task title$ desc:task desc$ priority:1$ stage:1$ due_date:2022-11-30$*
-        """
-
-def show_all_boards(token):
-
+def create_task(title, due_date, stage_id, token):
+    """
+    This function creates a task in account with given title and due_date.
+    """
+    url = "task/"
+    body = {
+        "title": title,
+        "description": "Created through Whatsapp",
+        "priority": 1,
+        "due_date": due_date,
+        "stage": stage_id
+    }
     res = None
+
     try:
-        res = make_request("board", "get", None, token)
-    except:
-       return error_msg
-
-    if(len(res) == 0):
-        return "Board list empty."
-
-    message = ""
-    for idx, board in enumerate(res):
-        title = board.get("title")
-        uid = board.get("id")
-        message = message + f"{idx+1}. *{title}* (uid:_{uid}_)\n\n"
-
-    return message
-
-def create_board(title, desc, token):
-
-    body = {"title":title, "description":desc}
-    res = None
-    try:
-        res = make_request("board/", "post", body, token)
+        res = make_request(url, "post", body, token)
     except:
         return error_msg
 
-    return f"Succesfully creted board with title {title} and description {desc}."
-
-def show_stages(board_id, token):
-
-    url = f"board/{board_id}/stage"
-    res = None
-    try:
-        res = make_request(url, "get", None, token)
-    except:
-        return error_msg
-    
-    if(len(res) == 0):
-        return "Stage list empty."
-
-    message = ""
-    for idx, stage in enumerate(res):
-        title = stage.get("title")
-        uid = stage.get("id")
-        message = message + f"{idx+1}. *{title}* (uid:_{uid}_)\n\n"
-
-    return message
-
-def create_stage(board_id, title, desc, token):
-
-    body={"title":title, "description":desc, "board":board_id}
-    res = None
-
-    try:
-        res = make_request("stage/", "post", body, token)
-    except:
-        return error_msg
-
-    return f"Succesfully created stage with title {title} and description {desc}."
+    return f"Reminder to _{title}_ succesfully added to your list."
 
 def get_tasks_count(token, complete, due_date=None):
     """
@@ -196,7 +71,7 @@ def get_tasks_count(token, complete, due_date=None):
     return len(res)
         
 # due_date is in format yyyy-mm-dd
-def show_tasks(token, complete, due_date=None):
+def show_tasks(token, complete, stage_id, due_date=None):
 
     url = None
     if due_date:
@@ -304,7 +179,25 @@ def preview_task(task_id, token):
     return message
 
 
+def help(message):
+    if message == "help reminder":
+        return """
+To create reminder for a task: *Hey, remind me to <task> today/tomorrow/<yyyy-mm-dd>*
 
+example1: *Hey, remind me to buy milk today*
+example2: *Hey, remind me to recharge TV on 2022-12-23*
+
+_Note: date format is strictly yyyy-mm-dd_
+        """
+
+    if message == "help list":
+        return """
+To list all pending and completed tasks: *Hey, list all my tasks*
+
+example1: *Hey, list all my tasks*
+
+_Note: this will only list tasks in user's whatsapp board_
+        """
 
 def process_message(name, message, phone):
 
@@ -328,19 +221,53 @@ Will meet you after this!!!
 
     # generate auth token
     token, created = Token.objects.get_or_create(user=user)
+    reminder_board_id = user.reminder_board_id
+    stage_id = Stage.objects.get(board = reminder_board_id, title = "Reminders").id
     message = message.lower()
 
     # Hi message
     if(message == "hi" or message == "hello" or message == "hey"):
         return f"""
-Hello, {name} this is SuperTaskManager at your service, here are somethings you can use me for.
+Hello, {name} this is SuperTaskManager at your service, here are few you can use me for.
 *Feature: Command*
-*1. To list all reminders* _List all reminders_
+*1. To create a reminder:* _Hey, remind me to <task> today/tomorrow/<yyyy-mm-dd>_
+type *help reminder* to know more.
+
+*2. To list all pending/completed tasks:* _Hey, list all my tasks_
+type *help list* to know more.
         """
 
-    # if("list" in message and 
-    # ("all" in message or "every" in message) and 
-    # ("reminder" in message or "reminders" in message)):
+    if "remind" in message:
+        # regex to check Hey, remind me to <task> today/tomorrow/<yyyy-mm-dd>
+        if(re.search(r"^hey, remind me to (.*) (today|tomorrow|\d{4}-\d{2}-\d{2})$", message)):
+            task = message.split("to")[1].strip()
+            date = message.split(" ")[-1]
+
+            # sanitize task title
+            if task.split(" ")[-1] == date:
+                # remove on from task title
+                task = task.split("on")[0].strip()
+
+            if date == "today":
+                date = datetime.date.today().strftime("%Y-%m-%d")
+            elif date == "tomorrow":
+                date = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+
+        
+            res = create_task(task, date, stage_id, token)
+            return res
+        else:
+            return help("help reminder")
+
+    if "list" in message:
+        # regex to check Hey, list all my pending/completed tasks
+        if(re.search(r"^hey, list all my tasks$", message)):
+
+            res = show_tasks_of_board(reminder_board_id, token)
+            return res
+        else:
+            return help("help list")
+
 
 
 
