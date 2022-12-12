@@ -24,3 +24,10 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=00, hour=22)
     }
 }
+
+app.conf.beat_schedule = {
+    "delete-due-tasks": {
+        'task': 'delete_due_tasks',
+        'schedule': crontab(minute=00, hour=00)
+    }
+}

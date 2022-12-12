@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from datetime import date, timedelta
 
 from rest_framework.authtoken.models import Token
+from tasks.models import Stage
 
 from tasks.utils import get_tasks_count
 
@@ -77,3 +78,17 @@ def schedule_message():
 
     for user in users:
         send_message.delay(user.id)
+
+@shared_task(name="delete_due_tasks")
+def delete_due_tasks():
+
+    # get all users with reminder_board_id present
+    users = User.objects.filter(reminder_board_id__isnull=False)
+
+    # for each user delete tasks with today - due_date >= 2 and stage = reminder_board_id
+    for user in users:
+        stage = Stage.objects.get(id=user.reminder_board_id)
+        user.tasks.filter(due_date__lte=date.today() - timedelta(days=2), stage=stage.id).delete()
+            
+
+
