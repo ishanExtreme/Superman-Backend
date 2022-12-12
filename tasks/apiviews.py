@@ -250,6 +250,12 @@ class StageViewSet(ModelViewSet):
         # __ looks into the field of the foreign key
         return Stage.objects.filter(deleted=False, created_by=self.request.user)
 
+    def create(self, request, *args, **kwargs):
+        if(request.data['board'] == request.user.reminder_board_id):
+            return Response({"error":["Stages cannot be created in this board"]}, status=status.HTTP_400_BAD_REQUEST)
+
+        return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         # serializer.user = self.request.user
         # serializer.save()

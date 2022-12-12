@@ -177,9 +177,32 @@ def create_stage(board_id, title, desc, token):
 
     return f"Succesfully created stage with title {title} and description {desc}."
 
-def show_tasks(complete, token):
+def get_tasks_count(token, complete, due_date=None):
+    """
+    This function returns number of tasks in account with filter of complete and due_date.
+    """
+    url = None
+    if due_date:
+        url = f"task?completed={complete}&due_date={due_date}"
+    else:
+        url = f"task?completed={complete}"
+    res = None
 
-    url = f"task?completed={complete}"
+    try:
+        res = make_request(url, "get", None, token)
+    except:
+        return error_msg
+
+    return len(res)
+        
+# due_date is in format yyyy-mm-dd
+def show_tasks(token, complete, due_date=None):
+
+    url = None
+    if due_date:
+        url = f"task?completed={complete}&due_date={due_date}"
+    else:
+        url = f"task?completed={complete}"
     res = None
 
     try:
@@ -191,10 +214,17 @@ def show_tasks(complete, token):
         return "Task list empty."
 
     message = ""
+    # pretty message
     for idx, task in enumerate(res):
         title = task.get("title")
         uid = task.get("id")
-        message = message + f"{idx+1}. *{title}* (uid:_{uid}_)\n\n"
+        message = message + f"{idx+1}. *{title}* (uid:_{uid}_)"
+        completed = task.get("completed")
+        if completed:
+            message = message+"✅\n"
+        else:
+            message = message+"⏳\n"
+        message = message + "\n"
 
     return message
 

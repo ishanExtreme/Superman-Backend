@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "custom_user.apps.CustomUserConfig",
+    "custom_user",
     "rest_framework",
     "rest_framework.authtoken",
     "corsheaders",
@@ -115,8 +115,6 @@ TIME_ZONE = "Asia/Kolkata"
 
 USE_I18N = True
 
-USE_L10N = True
-
 USE_TZ = True
 
 
@@ -138,6 +136,7 @@ LOGOUT_REDIRECT_URL = "/"
 BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379")
 # result of the function can be stored using the result_backend
 CELERY_RESULT_BACKEND = BROKER_URL
+CELERY_TIMEZONE = TIME_ZONE
 
 
 
