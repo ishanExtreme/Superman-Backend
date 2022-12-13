@@ -221,6 +221,12 @@ class BoardViewSet(ModelViewSet):
         # serializer.save()
         serializer.save(created_by=self.request.user)
 
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if (request.user.reminder_board_id and instance.id == request.user.reminder_board_id):
+            return Response({"error": ["This board cannot be edited"]}, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
+
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         if (request.user.reminder_board_id and instance.id == request.user.reminder_board_id):
