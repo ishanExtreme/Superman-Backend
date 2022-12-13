@@ -158,6 +158,10 @@ def preview_task(task_id, token):
     stage_name = res.get("stage_name")
     due_date = res.get("due_date")
 
+    # formatting due_date
+    due_date = datetime.datetime.strptime(
+        due_date, "%Y-%m-%d").strftime("%d %b %Y")
+
     if completed:
         completed = "✅"
     else:
@@ -209,6 +213,15 @@ example1: *Hey, mark task 1 as complete*
 _Note: You can get the uid of a task by listing all tasks_
         """
 
+    if message == "help preview":
+        return """
+To preview a task: *Hey, preview task <uid>*
+
+example1: *Hey, preview task 1*
+
+_Note: You can get the uid of a task by listing all tasks_
+        """
+
 
 def process_message(name, message, phone):
 
@@ -248,6 +261,9 @@ type *help list* to know more.
 
 *3. To mark a task as completed:* _Hey, mark task <uid> as complete_
 type *help mark complete* to know more.
+
+*4. To preview a task:* _Hey, preview task <uid>_
+type *help preview* to know more.
         """
 
     if "remind" in message:
@@ -289,3 +305,16 @@ type *help mark complete* to know more.
             return res
         else:
             return help("help mark complete")
+
+    if "preview" in message:
+        # regex to check Hey, preview task <uid>
+        if (re.search(r"^hey, preview task (\d+)$", message)):
+            task_id = message.split(" ")[-1]
+            res = preview_task(task_id, token)
+            return res
+        else:
+            return help("help preview")
+
+    return """
+I wasn't able to understand your message, please type *Hi* to know all the things I can do for you.
+    """
