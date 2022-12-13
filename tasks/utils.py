@@ -1,3 +1,4 @@
+import environ
 import datetime
 import requests
 import re
@@ -7,7 +8,6 @@ from rest_framework.authtoken.models import Token
 from tasks.models import Stage
 User = get_user_model()
 
-import environ
 
 env = environ.Env()
 
@@ -15,21 +15,33 @@ base_url = env("BASE_URL")
 
 error_msg = "Error in processing your request, please try again later."
 
+
 def make_request(url, method, body, token):
-    headers = {"Authorization": f"Token {token}", "Content-Type": "application/json; charset=utf-8"}
-    if(method == "get"):
-            response = requests.get(base_url+url, headers=headers)
-            print(response)
-            if(response.ok):
-                return response.json()
-            else:
-                raise Exception
-    if(method == "post"):
-        response = requests.post(base_url+url, json=body ,headers=headers)
-        if(response.ok):
+    headers = {"Authorization": f"Token {token}",
+               "Content-Type": "application/json; charset=utf-8"}
+    if (method == "get"):
+        response = requests.get(base_url+url, headers=headers)
+        if (response.ok):
             return response.json()
         else:
             raise Exception
+    if (method == "post" or method == "put" or method == "delete" or method == "patch"):
+
+        response = None
+        if method == "post":
+            response = requests.post(base_url+url, json=body, headers=headers)
+        elif method == "put":
+            response = requests.put(base_url+url, json=body, headers=headers)
+        elif method == "delete":
+            response = requests.delete(base_url+url, headers=headers)
+        elif method == "patch":
+            response = requests.patch(base_url+url, json=body, headers=headers)
+
+        if (response and response.ok):
+            return response.json()
+        else:
+            raise Exception
+
 
 def create_task(title, due_date, stage_id, token):
     """
@@ -52,6 +64,7 @@ def create_task(title, due_date, stage_id, token):
 
     return f"Reminder to _{title}_ succesfully added to your list."
 
+
 def get_tasks_count(token, complete, due_date=None):
     """
     This function returns number of tasks in account with filter of complete and due_date.
@@ -69,39 +82,7 @@ def get_tasks_count(token, complete, due_date=None):
         return error_msg
 
     return len(res)
-        
-# due_date is in format yyyy-mm-dd
-def show_tasks(token, complete, stage_id, due_date=None):
 
-    url = None
-    if due_date:
-        url = f"task?completed={complete}&due_date={due_date}"
-    else:
-        url = f"task?completed={complete}"
-    res = None
-
-    try:
-        res = make_request(url, "get", None, token)
-    except:
-        return error_msg
-
-    if(len(res) == 0):
-        return "Task list empty."
-
-    message = ""
-    # pretty message
-    for idx, task in enumerate(res):
-        title = task.get("title")
-        uid = task.get("id")
-        message = message + f"{idx+1}. *{title}* (uid:_{uid}_)"
-        completed = task.get("completed")
-        if completed:
-            message = message+"✅\n"
-        else:
-            message = message+"⏳\n"
-        message = message + "\n"
-
-    return message
 
 def show_tasks_of_board(board_id, token):
 
@@ -113,7 +94,7 @@ def show_tasks_of_board(board_id, token):
     except:
         return error_msg
 
-    if(len(res) == 0):
+    if (len(res) == 0):
         return "Task list empty."
     stage_tasks = {}
 
@@ -139,6 +120,26 @@ def show_tasks_of_board(board_id, token):
         message = message + "\n"
 
     return message
+
+
+def change_task_status(task_id, status, token):
+    """
+    This function changes the status of task with given id.
+    """
+    url = f"task/{task_id}/"
+    body = {
+        "completed": status
+    }
+    res = None
+
+    try:
+        res = make_request(url, "patch", body, token)
+    except:
+        return error_msg
+
+    msg = "completed" if status else "pending"
+    return f"Task status changed to {msg}."
+
 
 def preview_task(task_id, token):
 
@@ -199,12 +200,22 @@ example1: *Hey, list all my tasks*
 _Note: this will only list tasks in user's whatsapp board_
         """
 
+    if message == "mark complete":
+        return """
+To mark a task as complete: *Hey, mark task <uid> as complete*
+
+example1: *Hey, mark task 1 as complete*
+
+_Note: You can get the uid of a task by listing all tasks_
+        """
+
+
 def process_message(name, message, phone):
 
     user = None
     try:
-        user = User.objects.get(phone = phone)
-        if(user.wa_sending == False):
+        user = User.objects.get(phone=phone)
+        if (user.wa_sending == False):
             raise Exception
     # if WA feature is not enables
     except:
@@ -218,15 +229,14 @@ Step3: Go to settings and enable whatsapp feature
 Will meet you after this!!!
 """
 
-
     # generate auth token
     token, created = Token.objects.get_or_create(user=user)
     reminder_board_id = user.reminder_board_id
-    stage_id = Stage.objects.get(board = reminder_board_id, title = "Reminders").id
+    stage_id = Stage.objects.get(board=reminder_board_id, title="Reminders").id
     message = message.lower()
 
     # Hi message
-    if(message == "hi" or message == "hello" or message == "hey"):
+    if (message == "hi" or message == "hello" or message == "hey"):
         return f"""
 Hello, {name} this is SuperTaskManager at your service, here are few you can use me for.
 *Feature: Command*
@@ -235,11 +245,14 @@ type *help reminder* to know more.
 
 *2. To list all pending/completed tasks:* _Hey, list all my tasks_
 type *help list* to know more.
+
+*3. To mark a task as completed:* _Hey, mark task <uid> as complete_
+type *help mark complete* to know more.
         """
 
     if "remind" in message:
         # regex to check Hey, remind me to <task> today/tomorrow/<yyyy-mm-dd>
-        if(re.search(r"^hey, remind me to (.*) (today|tomorrow|\d{4}-\d{2}-\d{2})$", message)):
+        if (re.search(r"^hey, remind me to (.*) (today|tomorrow|\d{4}-\d{2}-\d{2})$", message)):
             task = message.split("to")[1].strip()
             date = message.split(" ")[-1]
 
@@ -251,9 +264,9 @@ type *help list* to know more.
             if date == "today":
                 date = datetime.date.today().strftime("%Y-%m-%d")
             elif date == "tomorrow":
-                date = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+                date = (datetime.date.today() +
+                        datetime.timedelta(days=1)).strftime("%Y-%m-%d")
 
-        
             res = create_task(task, date, stage_id, token)
             return res
         else:
@@ -261,23 +274,18 @@ type *help list* to know more.
 
     if "list" in message:
         # regex to check Hey, list all my pending/completed tasks
-        if(re.search(r"^hey, list all my tasks$", message)):
+        if (re.search(r"^hey, list all my tasks$", message)):
 
             res = show_tasks_of_board(reminder_board_id, token)
             return res
         else:
             return help("help list")
 
-
-
-
-                        
-
-        
-
-
-
-
-
-
-    
+    if "mark" in message:
+        # regex to check Hey, mark task <uid> as complete
+        if (re.search(r"^hey, mark task (\d+) as complete$", message)):
+            task_id = message.split(" ")[-3]
+            res = change_task_status(task_id, True, token)
+            return res
+        else:
+            return help("help mark complete")
