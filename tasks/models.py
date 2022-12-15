@@ -1,3 +1,4 @@
+import environ
 from django.db import models
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
@@ -5,10 +6,12 @@ from django.db import transaction
 
 from django.dispatch import receiver
 from django_rest_passwordreset.signals import reset_password_token_created
-from django.core.mail import send_mail 
+from django.core.mail import send_mail
 
 from django.contrib.auth import get_user_model
 User = get_user_model()
+
+env = environ.Env()
 
 
 class Board(models.Model):
@@ -61,7 +64,8 @@ class Task(models.Model):
     created_date = models.DateTimeField(auto_now=True)
     due_date = models.DateField()
     deleted = models.BooleanField(default=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, null=True, blank=True)
     priority = models.IntegerField()
     # demo field set anything among the option
     status = models.CharField(
@@ -135,7 +139,8 @@ def handle_priority(sender, instance, *args, **kwargs):
 class History(models.Model):
     # related to task object one to many relation
     task = models.ForeignKey(Task, on_delete=models.CASCADE)
-    previous_status = models.CharField(max_length=100, choices=Task.STATUS_CHOICES)
+    previous_status = models.CharField(
+        max_length=100, choices=Task.STATUS_CHOICES)
     new_status = models.CharField(max_length=100, choices=Task.STATUS_CHOICES)
     changed_at = models.DateTimeField(auto_now_add=True)
 
@@ -160,7 +165,8 @@ def handle_history(sender, instance, created, *args, **kwargs):
 class Schedule(models.Model):
 
     time = models.TimeField(default="00:00:00")
-    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, null=True, blank=True)
     prev_sent_time = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
@@ -170,7 +176,13 @@ class Schedule(models.Model):
 @receiver(reset_password_token_created)
 def password_reset_token_created(sender, instance, reset_password_token, *args, **kwargs):
 
-    email_plaintext_message = f"Verification Token: {reset_password_token.key}"
+    email_host = env("EMAIL")
+    email_plaintext_message = f"""
+Hello, {reset_password_token.user.username}!
+You have requested a password reset for your user account at supertaskman.tech.
+Please user the following token in the password reset form:
+
+Verification Token: {reset_password_token.key}"""
 
     send_mail(
         # title:
@@ -178,7 +190,7 @@ def password_reset_token_created(sender, instance, reset_password_token, *args, 
         # message:
         email_plaintext_message,
         # from:
-        "noreply@somehost.local",
+        email_host,
         # to:
         [reset_password_token.user.email]
     )
