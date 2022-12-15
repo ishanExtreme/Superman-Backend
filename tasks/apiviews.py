@@ -257,6 +257,12 @@ class StageViewSet(ModelViewSet):
         # __ looks into the field of the foreign key
         return Stage.objects.filter(deleted=False, created_by=self.request.user)
 
+    # def update(self, request, *args, **kwargs):
+    #     instance = self.get_object()
+    #     if (request.user.reminder_board_id and instance.board.id == request.user.reminder_board_id):
+    #         return Response({"error": ["This stage cannot be edited"]}, status=status.HTTP_400_BAD_REQUEST)
+    #     return super().update(request, *args, **kwargs)
+
     def create(self, request, *args, **kwargs):
         if (request.data['board'] == request.user.reminder_board_id):
             return Response({"error": ["Stages cannot be created in this board"]}, status=status.HTTP_400_BAD_REQUEST)
