@@ -1,7 +1,6 @@
 import environ
 from django.contrib.auth import get_user_model
 from datetime import date
-from django.utils.timezone import make_aware
 from tasks.models import Task, History, Board, Stage
 from rest_framework.serializers import (
     ModelSerializer,
