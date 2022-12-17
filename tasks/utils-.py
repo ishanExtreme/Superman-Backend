@@ -8,7 +8,7 @@ import environ
 
 env = environ.Env()
 
-base_url = env("BASE_URL")
+base_url = env("BASE_URL", default="http://127.0.0.1:8000/api/")
 
 error_msg = "Error in processing your request, please try again later."
 
