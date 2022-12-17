@@ -6,9 +6,11 @@ from ..views import (
     TaskCreateForm,
     AddTaskView,
 )
-from django.contrib.auth.models import User
 from ..models import Schedule, Task, Board, Stage
 import datetime
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
 class TaskListViewTest(TestCase):

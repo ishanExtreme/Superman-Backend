@@ -1,7 +1,9 @@
 from django.test import TestCase
 from ..models import Schedule, Task, Stage, Board
-from django.contrib.auth.models import User
 import datetime
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
 class TaskTest(TestCase):
