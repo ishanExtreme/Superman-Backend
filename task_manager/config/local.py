@@ -1,9 +1,12 @@
 from .base import *  # noqa
 from .base import env
+import os
 
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", ".loca.lt", ".ngrok.io"]
+
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases

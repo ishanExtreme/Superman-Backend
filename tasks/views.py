@@ -1,4 +1,4 @@
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse, JsonResponse
 from django.shortcuts import render
 from tasks.models import Task, Schedule
 from django.contrib.auth.forms import UserCreationForm
@@ -8,9 +8,21 @@ from django.views.generic.list import ListView
 from django.views.generic.edit import DeleteView, CreateView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms import ModelForm, ValidationError, TimeInput
+from django.views import View
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from django.core.exceptions import PermissionDenied
 
-from django.contrib.auth.models import User
+from twilio.twiml.messaging_response import MessagingResponse
+
+from tasks.utils import process_message
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+import environ
+
+env = environ.Env()
 
 
 def home_view(request):
@@ -209,6 +221,28 @@ class UpdateScheduleView(SheduleManager, UpdateView):
         self.object.save()
 
         return HttpResponseRedirect(self.get_success_url())
+
+class MessageView(View):
+
+    @csrf_exempt
+    def dispatch(self, request, *args, **kwargs):
+        # verify request is from twilio
+        if(self.request.POST.get("AccountSid") != env("TWILIO_ACCOUNT_SID")):
+            return HttpResponse("Permission Denied", status=403)
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+
+        user_name = request.POST.get("ProfileName")
+        phone = request.POST.get("From").split(":")[1][3:]
+        message = request.POST.get("Body")
+
+        res_message = process_message(user_name, message, phone)
+        response = MessagingResponse()
+        response.message(res_message)
+        return HttpResponse(str(response))
+        
 
 
 # class DisplayTaksView()

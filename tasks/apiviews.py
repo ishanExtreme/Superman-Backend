@@ -1,10 +1,14 @@
-from django.contrib.auth.models import User
+import environ
+from django.contrib.auth import get_user_model
+from datetime import date
+from django.utils.timezone import make_aware
 from tasks.models import Task, History, Board, Stage
 from rest_framework.serializers import (
     ModelSerializer,
     EmailField,
     CharField,
     StringRelatedField,
+    ValidationError
 )
 from rest_framework.views import APIView
 from rest_framework import generics
@@ -21,6 +25,15 @@ from django_filters.rest_framework import (
     DateFilter,
 )
 from rest_framework import status
+
+from django.db import transaction
+
+from twilio.rest import Client
+client = Client()
+
+User = get_user_model()
+
+env = environ.Env()
 
 
 class TaskCompletedCountView(APIView):
@@ -63,7 +76,9 @@ class UserCreationSerializer(ModelSerializer):
     class Meta:
         model = User
         fields = ("username", "email", "password")
-        extra_kwargs = {"password": {"write_only": True}}
+        extra_kwargs = {
+            "password": {"write_only": True},
+        }
 
     def create(self, validated_data):
         password = validated_data.pop("password")
@@ -71,6 +86,13 @@ class UserCreationSerializer(ModelSerializer):
         user.set_password(password)
         user.save()
         return user
+
+
+class UserGetSerializer(ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["username", "email", "phone",
+                  "wa_sending", "notification_on"]
 
 
 # Register User
@@ -83,7 +105,7 @@ class UserCreation(mixins.CreateModelMixin, GenericViewSet):
 # Get user via token
 class UserGet(mixins.ListModelMixin, GenericViewSet):
     queryset = User.objects.all()
-    serializer_class = UserCreationSerializer
+    serializer_class = UserGetSerializer
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
@@ -150,6 +172,17 @@ class TaskSerializerSuper(ModelSerializer):
             "created_date",
         ]
 
+    def validate(self, attrs):
+        """
+        Check if due date is not before today
+        """
+        now = date.today()
+
+        if ('due_date' in attrs and attrs['due_date'] < now):
+            raise ValidationError("Due date cannot be before today")
+
+        return attrs
+
 
 class HistorySerializer(ModelSerializer):
     class Meta:
@@ -188,6 +221,18 @@ class BoardViewSet(ModelViewSet):
         # serializer.save()
         serializer.save(created_by=self.request.user)
 
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if (request.user.reminder_board_id and instance.id == request.user.reminder_board_id):
+            return Response({"error": ["This board cannot be edited"]}, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if (request.user.reminder_board_id and instance.id == request.user.reminder_board_id):
+            return Response({"error": ["This board cannot be deleted"]}, status=status.HTTP_400_BAD_REQUEST)
+        return super().destroy(request, *args, **kwargs)
+
 
 class StageListView(mixins.ListModelMixin, GenericViewSet):
     queryset = Stage.objects.all()
@@ -212,10 +257,28 @@ class StageViewSet(ModelViewSet):
         # __ looks into the field of the foreign key
         return Stage.objects.filter(deleted=False, created_by=self.request.user)
 
+    # def update(self, request, *args, **kwargs):
+    #     instance = self.get_object()
+    #     if (request.user.reminder_board_id and instance.board.id == request.user.reminder_board_id):
+    #         return Response({"error": ["This stage cannot be edited"]}, status=status.HTTP_400_BAD_REQUEST)
+    #     return super().update(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        if (request.data['board'] == request.user.reminder_board_id):
+            return Response({"error": ["Stages cannot be created in this board"]}, status=status.HTTP_400_BAD_REQUEST)
+
+        return super().create(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         # serializer.user = self.request.user
         # serializer.save()
         serializer.save(created_by=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if (request.user.reminder_board_id and instance.board.id == request.user.reminder_board_id):
+            return Response({"error": ["This stage cannot be deleted"]}, status=status.HTTP_400_BAD_REQUEST)
+        return super().destroy(request, *args, **kwargs)
 
 
 class TaskViewSet(mixins.ListModelMixin, GenericViewSet):
@@ -227,7 +290,7 @@ class TaskViewSet(mixins.ListModelMixin, GenericViewSet):
 
     def get_queryset(self):
         return Task.objects.filter(
-            deleted=False, stage=self.kwargs["stage_pk"], user=self.request.user
+            deleted=False, stage__board=self.kwargs["board_pk"], user=self.request.user
         ).order_by("priority")
 
 
@@ -274,6 +337,7 @@ class ChangePasswordSerializer(ModelSerializer):
         model = User
         fields = ["old_password", "new_password"]
 
+
 class ChangePasswordView(generics.UpdateAPIView):
     """
     Endpoint to change user's password having current password in hand
@@ -290,19 +354,163 @@ class ChangePasswordView(generics.UpdateAPIView):
         instance = self.get_object()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         if not instance.check_password(serializer.data.get("old_password")):
             return Response({"old_password": ["Wrong password."]}, status=status.HTTP_400_BAD_REQUEST)
 
         instance.set_password(serializer.data.get("new_password"))
         instance.save()
         response = {
-                'status': 'success',
-                'code': status.HTTP_200_OK,
-                'message': 'Password updated successfully',
-                'data': []
-            }
+            'status': 'success',
+            'code': status.HTTP_200_OK,
+            'message': 'Password updated successfully',
+            'data': []
+        }
 
         return Response(response)
-        
 
+######################## User WA logic ##############################
+
+
+class SendVerificationCodeSerializer(ModelSerializer):
+    """
+    Serializer for user verification code send
+    """
+
+    class Meta:
+        model = User
+        fields = ["phone"]
+
+
+class SendVerificationCode(APIView):
+    """
+    Endpoint to send verification code to user's phone number
+    """
+    serializer_class = SendVerificationCodeSerializer
+    model = User
+    permission_classes = (IsAuthenticated, )
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        phone = serializer.data.get("phone")
+        user = self.request.user
+
+        # if given phone number is same as old number then no need for verification
+        if user.phone and user.phone == phone:
+            return Response({"error": ["Number already verified"]}, status=status.HTTP_400_BAD_REQUEST)
+
+        verification = client.verify.services(
+            env('TWILIO_VERIFY_SERVICE')).verifications.create(
+            to=f"+91{phone}", channel='whatsapp')
+
+        if verification.status != 'pending':
+            return Response({'error': ['Something went wrong']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response("Verification code sent successfully", status=status.HTTP_200_OK)
+
+
+class VerifyCodeSerializer(ModelSerializer):
+    """
+    Serializer for user verification code send
+    """
+    code = CharField(required=True, max_length=6, min_length=6)
+
+    class Meta:
+        model = User
+        fields = ["code", "phone"]
+
+
+class VerifyCode(APIView):
+    """
+    Endpoint to verify user's phone number
+    """
+    serializer_class = VerifyCodeSerializer
+    model = User
+    permission_classes = (IsAuthenticated, )
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        code = serializer.data.get("code")
+        phone = serializer.data.get("phone")
+
+        user = self.request.user
+
+        verification_check = client.verify.services(
+            env('TWILIO_VERIFY_SERVICE')).verification_checks.create(
+                to=f"+91{phone}", code=code)
+
+        if verification_check.status != 'approved':
+            return Response({"error": ['Invalid code']}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.phone = phone
+        user.save()
+
+        return Response("Phone number verified successfully", status=status.HTTP_200_OK)
+
+
+class UserWASerializer(ModelSerializer):
+    """
+    Serializer for user WA details
+    """
+    class Meta:
+        model = User
+        fields = ["wa_sending", "notification_on", "reminder_board_id"]
+
+    def update(self, instance, validated_data):
+        # instance.wa_sending = serializer.data.get("wa_sending")
+        # instance.notification_on = serializer.data.get("notification_on")
+        # for first time turning on the reminder fearture
+        if (not instance.reminder_board_id):
+            # create a board for default board
+            def_board = Board(
+                title="Watsapp Board",
+                description="This board is created by default for Watsapp",
+                created_by=instance)
+
+            def_stage = Stage(
+                title="Reminders",
+                description="This stage is created by default for Watsapp reminders",
+                created_by=instance,
+                board=def_board
+            )
+            # rollback if any error occurs
+            with transaction.atomic():
+                def_board.save()
+                def_stage.save()
+
+            instance.reminder_board_id = def_board.id
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+
+        return instance
+
+
+class UserWAView(generics.UpdateAPIView):
+    """
+    Endpoint to update user's WA details
+    """
+    serializer_class = UserWASerializer
+    model = User
+    permission_classes = (IsAuthenticated, )
+
+    def get_object(self):
+        obj = self.request.user
+        return obj
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if (not instance.phone):
+            return Response({"error": ["Verify your whatsapp number first"]}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = serializer = self.get_serializer(
+            instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response("User WA details updated successfully", status=status.HTTP_200_OK)

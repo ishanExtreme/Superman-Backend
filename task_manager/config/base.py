@@ -15,6 +15,7 @@ import environ
 
 env = environ.Env()
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -42,6 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "custom_user",
     "rest_framework",
     "rest_framework.authtoken",
     "corsheaders",
@@ -82,6 +84,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "task_manager.wsgi.application"
 
+AUTH_USER_MODEL = "custom_user.User"
+
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
@@ -111,8 +115,6 @@ TIME_ZONE = "Asia/Kolkata"
 
 USE_I18N = True
 
-USE_L10N = True
-
 USE_TZ = True
 
 
@@ -134,6 +136,7 @@ LOGOUT_REDIRECT_URL = "/"
 BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379")
 # result of the function can be stored using the result_backend
 CELERY_RESULT_BACKEND = BROKER_URL
+CELERY_TIMEZONE = TIME_ZONE
 
 
 
