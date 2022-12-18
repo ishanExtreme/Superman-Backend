@@ -22,6 +22,7 @@ from django_filters.rest_framework import (
     ChoiceFilter,
     BooleanFilter,
     DateFilter,
+    OrderingFilter
 )
 from rest_framework import status
 
@@ -193,6 +194,7 @@ class TaskFilter(FilterSet):
     title = CharFilter(lookup_expr="icontains")
     completed = BooleanFilter()
     due_date = DateFilter()
+    ordering = OrderingFilter(fields=(("priority", "due_date")))
 
 
 class HistoryFilter(FilterSet):

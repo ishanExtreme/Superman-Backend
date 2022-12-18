@@ -1,5 +1,6 @@
 import environ
 import datetime
+from datetime import date as date_fn, timedelta
 import requests
 import re
 from django.contrib.auth import get_user_model
@@ -84,9 +85,11 @@ def get_tasks_count(token, complete, due_date=None):
     return len(res)
 
 
-def show_tasks_of_board(board_id, token):
+def show_tasks_of_board(board_id, token, due_date=None):
 
-    url = f"board/{board_id}/task"
+    url = f"board/{board_id}/task?ordering=priority,-due_date"
+    if (due_date):
+        url = url + f"&due_date={due_date}"
     res = None
 
     try:
@@ -264,6 +267,10 @@ type *help mark complete* to know more.
 
 *4. To preview a task:* _Hey, preview task <uid>_
 type *help preview* to know more.
+
+*5. To know your incoming tasks:* _My tasks_
+this will display all your tasks with deadline today and tomorrow.
+
         """
 
     if "remind" in message:
@@ -314,6 +321,25 @@ type *help preview* to know more.
             return res
         else:
             return help("help preview")
+
+    if message == "my tasks":
+        today = date_fn.today()
+        tomorrow = today + timedelta(days=1)
+
+        tasks_due_today = show_tasks_of_board(
+            reminder_board_id, token, due_date=today)
+        tasks_due_tomorrow = show_tasks_of_board(
+            reminder_board_id, token, due_date=tomorrow)
+
+        return f"""
+Here's the list of your incoming tasks:
+
+*Tasks expiring today*
+{tasks_due_today}
+*Tasks expiring tomorrow*
+{tasks_due_tomorrow}
+GoodLuck! :)
+        """
 
     return """
 I wasn't able to understand your message, please type *Hi* to know all the things I can do for you.
