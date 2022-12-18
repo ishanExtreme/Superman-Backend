@@ -86,7 +86,7 @@ def get_tasks_count(token, complete, due_date=None):
 
 def show_tasks_of_board(board_id, token):
 
-    url = f"board/{board_id}/task"
+    url = f"board/{board_id}/task?ordering=priority,-due_date"
     res = None
 
     try:
@@ -264,6 +264,8 @@ type *help mark complete* to know more.
 
 *4. To preview a task:* _Hey, preview task <uid>_
 type *help preview* to know more.
+
+*5. To know your incoming tasks
         """
 
     if "remind" in message:
