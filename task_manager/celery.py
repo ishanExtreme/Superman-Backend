@@ -21,7 +21,7 @@ app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 app.conf.beat_schedule = {
     "send-message-every-day": {
         'task': 'schedule_message',
-        'schedule': crontab(minute=48, hour=23)
+        'schedule': crontab(minute=00, hour=22)
     },
     "delete-due-tasks": {
         'task': 'delete_due_tasks',
