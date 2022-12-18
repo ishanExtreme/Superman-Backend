@@ -10,11 +10,13 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
+from django.core.management.commands.runserver import Command as runserver
 from pathlib import Path
 import environ
 
 env = environ.Env()
 
+runserver.default_port = "8001"
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -31,7 +33,6 @@ SECRET_KEY = env(
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DJANGO_DEBUG", False)
-
 
 
 # Application definition
@@ -139,7 +140,6 @@ CELERY_RESULT_BACKEND = BROKER_URL
 CELERY_TIMEZONE = TIME_ZONE
 
 
-
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
@@ -148,5 +148,3 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.TokenAuthentication",
     ),
 }
-
-
