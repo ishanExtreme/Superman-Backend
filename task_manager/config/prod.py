@@ -23,4 +23,3 @@ EMAIL_USE_TLS = True
 
 # django-cors-headers - https://github.com/adamchainz/django-cors-headers#setup
 CORS_ALLOW_ALL_ORIGINS = True
-
