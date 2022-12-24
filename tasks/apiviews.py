@@ -46,6 +46,7 @@ class TaskCompletedCountView(APIView):
 
     def get(self, request, format=None):
         task_count = Task.objects.filter(completed=True).count()
+
         content = {"count": task_count}
         return Response(content)
 
@@ -443,6 +444,7 @@ class VerifyCode(APIView):
         verification_check = client.verify.services(
             env('TWILIO_VERIFY_SERVICE')).verification_checks.create(
                 to=f"+91{phone}", code=code)
+
 
         if verification_check.status != 'approved':
             return Response({"error": ['Invalid code']}, status=status.HTTP_400_BAD_REQUEST)

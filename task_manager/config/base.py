@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'django_rest_passwordreset',
 ]
 
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
