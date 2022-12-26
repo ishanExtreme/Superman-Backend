@@ -407,6 +407,7 @@ class SendVerificationCode(APIView):
             env('TWILIO_VERIFY_SERVICE')).verifications.create(
             to=f"+91{phone}", channel='whatsapp')
 
+        print(verification)
         if verification.status != 'pending':
             return Response({'error': ['Something went wrong']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
