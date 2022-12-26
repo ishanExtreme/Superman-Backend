@@ -35,6 +35,9 @@ User = get_user_model()
 
 env = environ.Env()
 
+import logging
+
+
 
 class TaskCompletedCountView(APIView):
     """
@@ -46,7 +49,6 @@ class TaskCompletedCountView(APIView):
 
     def get(self, request, format=None):
         task_count = Task.objects.filter(completed=True).count()
-
         content = {"count": task_count}
         return Response(content)
 
@@ -407,8 +409,8 @@ class SendVerificationCode(APIView):
             env('TWILIO_VERIFY_SERVICE')).verifications.create(
             to=f"+91{phone}", channel='whatsapp')
 
-        print(verification)
         if verification.status != 'pending':
+            logging.error("WA verification error", extra=dict(verification=verification))
             return Response({'error': ['Something went wrong']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response("Verification code sent successfully", status=status.HTTP_200_OK)
